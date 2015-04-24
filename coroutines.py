@@ -4,13 +4,21 @@ from functools import partial
 
 
 def coroutine(func):
+    """
+    Wraps a function that is created to be a coroutine to
+    call automatically `.next()` method to ensure we're moving
+    to the first `yield` expression.
+    """
+
     def wrapper(*args, **kw):
         gen = func(*args, **kw)
         gen.next()
         return gen
+
     wrapper.__name__ = func.__name__
     wrapper.__dict__ = func.__dict__
     wrapper.__doc__ = func.__doc__
+
     return wrapper
 
 
@@ -96,6 +104,11 @@ def pipeline(iterator):
                 fname = globals()[value]
 
                 def wrapper(*args):
+                    """
+                    Creates a partially applied function, just missing
+                    the last argument, which is the `destination` coroutine
+                    and will be added upon calling the Execute instance
+                    """
                     fn = partial(fname, *args)
                     self.stack.append(lambda x: fn(x))
                     return self
@@ -117,7 +130,7 @@ def direct_pipeline(employees, destination):
     return execute
 
 
-direct_alias_contains_u_not_at_the_beginning = direct_pipeline(
+filter_users_direct = direct_pipeline(
     open('file.txt'),
     create_dict(
         ('alias', 'email', 'location'),
@@ -135,13 +148,13 @@ direct_alias_contains_u_not_at_the_beginning = direct_pipeline(
     )
 )
 
-direct_alias_contains_u_not_at_the_beginning()
+filter_users_direct()
 
-alias_contains_u_not_at_the_beginning = (pipeline(open('file.txt')).
-                                         create_dict(('alias', 'email', 'location')).
-                                         filter_by('alias', r'^[^u]+u').
-                                         pluck('alias').
-                                         dumper(os.sys.stdout.write).
-                                         print_name('result.log'))
+filter_users_chain = (pipeline(open('file.txt')).
+                      create_dict(('alias', 'email', 'location')).
+                      filter_by('alias', r'^[^u]+u').
+                      pluck('alias').
+                      dumper(os.sys.stdout.write).
+                      print_name('result.log'))
 
-alias_contains_u_not_at_the_beginning()
+filter_users_chain()
