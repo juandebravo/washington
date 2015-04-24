@@ -52,20 +52,6 @@ def pluck(field, destination):
 
 def pipeline(employees):
 
-    class Method(object):
-
-        def __init__(self, method, execute):
-            self.execute = execute
-            self.fname = globals()[method]
-
-        def __call__(self, *args):
-            self.fn = partial(self.fname, *args)
-            self.execute.stack.append(self)
-            return self.execute
-
-        def send(self, i):
-            self.fn(self.execute.stack[i+1].fn)
-
     class Execute(object):
 
         def __init__(self, employees):
@@ -73,13 +59,28 @@ def pipeline(employees):
             self.employees = employees
 
         def __call__(self):
+            n = len(self.stack)
+            for i, fn in enumerate(reversed(self.stack)):
+                if i > 0:
+                    self.stack[n-i-1] = fn(self.stack[n-i])
+                else:
+                    self.stack[n-i-1] = fn(None)
+
             for e in self.employees:
                 self.stack[0].send(e)
+
             self.stack[0].close()
 
         def __getattr__(self, value):
             if value in ('create_dict', 'filter_by', 'pluck', 'print_name'):
-                return Method(value, self)
+                fname = globals()[value]
+
+                def wrapper(*args):
+                    fn = partial(fname, *args)
+                    self.stack.append(lambda x: fn(x))
+                    return self
+
+                return wrapper
             else:
                 return self.__dict__.get(value)
 
