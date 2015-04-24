@@ -108,24 +108,36 @@ def pipeline(iterator):
     return Execute(iterator)
 
 
-employees = open('file.txt')
+def direct_pipeline(employees, destination):
+    def execute():
+        for e in employees:
+            destination.send(e)
+        destination.close()
 
-# alias_contains_u_not_at_the_beginning = pipeline(
-#     employees,
-#     create_dict(
-#         ('alias', 'email', 'location'),
-#         filter_by(
-#             'alias',
-#             r'^[^u]+u',
-#             pluck(
-#                 'alias',
-#                 print_name('result.log')
-#             )
-#         )
-#     )
-# )
+    return execute
 
-alias_contains_u_not_at_the_beginning = (pipeline(employees).
+
+direct_alias_contains_u_not_at_the_beginning = direct_pipeline(
+    open('file.txt'),
+    create_dict(
+        ('alias', 'email', 'location'),
+        filter_by(
+            'alias',
+            r'^[^u]+u',
+            pluck(
+                'alias',
+                dumper(
+                    os.sys.stdout.write,
+                    print_name('result.log')
+                )
+            )
+        )
+    )
+)
+
+direct_alias_contains_u_not_at_the_beginning()
+
+alias_contains_u_not_at_the_beginning = (pipeline(open('file.txt')).
                                          create_dict(('alias', 'email', 'location')).
                                          filter_by('alias', r'^[^u]+u').
                                          pluck('alias').
