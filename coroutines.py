@@ -5,11 +5,10 @@ from functools import partial
 
 def coroutine(func):
     """
-    Wraps a function that is created to be a coroutine to
+    Wrap a function that is created to be a coroutine to
     call automatically `.next()` method to ensure we're moving
     to the first `yield` expression.
     """
-
     def wrapper(*args, **kw):
         gen = func(*args, **kw)
         gen.next()
@@ -69,8 +68,8 @@ def dumper(out, destination):
 
 def pipeline(iterator):
     """
-    Function that creates and return an Execute instance that
-    will encapsulate the different steps in the pipeline
+    Build an Execute instance that will encapsulate
+    the steps sequence in the pipeline
     """
 
     class Execute(object):
@@ -92,8 +91,11 @@ def pipeline(iterator):
                     self.stack[n-i-1] = fn(None)
 
             for e in self.iterator:
+                # Call the first coroutine and let the flow progress
+                # throw the destinations chain
                 self.stack[0].send(e)
 
+            # Ensure we're free-ing the resources
             self.stack[0].close()
 
         def __getattr__(self, value):
@@ -130,6 +132,17 @@ def direct_pipeline(employees, destination):
     return execute
 
 
+# Imperative way
+for u in open('file.txt'):
+    d = dict(zip(('alias', 'email', 'location'), u.split('|', 2)))
+    patc = re.compile(r'^[^u]+u')
+    if patc.search(d['alias']):
+        print d['alias']
+        with open('result2.log', 'a') as f:
+            f.write(d['alias'])
+
+
+# Coroutines
 filter_users_direct = direct_pipeline(
     open('file.txt'),
     create_dict(
@@ -150,6 +163,7 @@ filter_users_direct = direct_pipeline(
 
 filter_users_direct()
 
+# Coroutines using a chainable API
 filter_users_chain = (pipeline(open('file.txt')).
                       create_dict(('alias', 'email', 'location')).
                       filter_by('alias', r'^[^u]+u').
