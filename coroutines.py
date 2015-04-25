@@ -137,7 +137,7 @@ for u in open('file.txt'):
     d = dict(zip(('alias', 'email', 'location'), u.split('|', 2)))
     patc = re.compile(r'^[^u]+u')
     if patc.search(d['alias']):
-        print d['alias']
+        os.sys.stdout.write(d['alias'])  # Python 2/3 compliance
         with open('result2.log', 'a') as f:
             f.write(d['alias'])
 
