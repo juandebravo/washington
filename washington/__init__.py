@@ -1,1 +1,2 @@
-from main import *
+from .main import *
+from .register import register
