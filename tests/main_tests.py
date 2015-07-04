@@ -27,7 +27,7 @@ def collect(where, destination=None):
         value = yield
         where.append(value)
         if destination is not None:
-            destination.send(str(value).upper())
+            destination.send(value)
 
 register(uppercase, collect)
 
@@ -91,7 +91,78 @@ class PipelineTestCase(unittest.TestCase):
         len(self.recollector) | should.be(3)
 
     def test_raises_exception_if_invalid_coroutine(self):
-        raise SkipTest
+        @coroutine
+        def to_xxx(destination=None):
+            while True:
+                value = yield
+                value.to_xxx()
+
+        register(to_xxx)
+        pipeline = self.pipeline.to_xxx()
+
+        with should.throw(AttributeError):
+            pipeline()
+
 
     def test_exposes_a_valid_stack_trace(self):
         raise SkipTest
+
+    def test_executes_catch_upon_exception_raised(self):
+        @coroutine
+        def to_xxx(destination=None):
+            while True:
+                value = yield
+                value.to_xxx()
+
+        register(to_xxx)
+
+        _pipeline = (
+            pipeline((x for x in ('foo', 'bar', 'bazz')))
+            .uppercase()
+            .to_xxx()
+            .catch(collect(self.recollector))
+        )
+
+        _pipeline()
+        'FOO' | should.be_in(self.recollector)
+        len(self.recollector) | should.be(1)
+
+    def test_executes_catch_only_upon_exception_raised(self):
+
+        @coroutine
+        def to_xxx(destination=None):
+            while True:
+                value = yield
+                v = value.to_xxx()
+                if destination is not None:
+                    destination.send(v)
+
+        class Foo(object):
+
+            def __init__(self, value):
+                self.value = value
+
+            def to_xxx(self):
+                return self
+
+            def __repr__(self):
+                return self.value
+
+        register(to_xxx)
+
+        values = (Foo('10'), Foo('20'), Foo('30'), '1', '2')
+
+        _pipeline = (
+            pipeline((x for x in values))
+            .to_xxx()
+            .catch(collect(self.recollector))
+            .collect(self.recollector)
+        )
+
+        _pipeline()
+
+        all_of(
+            [x for (i, x) in enumerate(values) if i < 4]
+        ) | should.be_in(self.recollector)
+
+        len(self.recollector) | should.be(4)

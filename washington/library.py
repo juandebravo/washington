@@ -6,6 +6,17 @@ from .register import register
 
 
 @coroutine
+def tap(catch, destination):
+    while True:
+        u = yield
+        try:
+            destination.send(u)
+        except Exception as ex:
+            if not isinstance(ex, StopIteration):
+                catch.send(u)
+
+
+@coroutine
 def create_dict(keys, destination=None):
     while True:
         u = yield
@@ -49,4 +60,4 @@ def dumper(out, destination):
         out(value + os.linesep)
         destination.send(value)
 
-register(create_dict, filter_by, print_name, pluck, dumper)
+register(create_dict, filter_by, print_name, pluck, dumper, tap)

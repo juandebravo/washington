@@ -19,6 +19,9 @@ class Registrar(object):
     def __getitem__(self, value):
         return self._coroutines[value]
 
+    def __repr__(self):
+        return '<' + ', '.join(self._coroutines.keys()) + '>'
+
 
 register = Registrar()
 
